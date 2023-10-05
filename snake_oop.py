@@ -1,7 +1,6 @@
 import math
 import random
 import pygame
-import tkinter as tk
 
 # constants
 SCREEN_WIDTH = 800
@@ -55,29 +54,34 @@ class Snake(object):
         self.dir_x = 0
         self.dir_y = 1
 
-    def move(self):
+    def move(self, dir=None):
         ## add pressed keys to the turns dictionary
         new_dir_x = self.dir_x
         new_dir_y = self.dir_y
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                return False
+        keys = pygame.key.get_pressed()
 
-            keys = pygame.key.get_pressed()
-            for key in keys:
-                if keys[pygame.K_LEFT]:
-                    new_dir_x = -1
-                    new_dir_y = 0
-                elif keys[pygame.K_RIGHT]:
-                    new_dir_x = 1
-                    new_dir_y = 0
-                elif keys[pygame.K_UP]:
-                    new_dir_x = 0
-                    new_dir_y = -1
-                elif keys[pygame.K_DOWN]:
-                    new_dir_x = 0
-                    new_dir_y = 1
+        if dir:
+            new_dir_x = dir[0]
+            new_dir_y = dir[1]
+        else:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return False
+
+                for key in keys:
+                    if keys[pygame.K_LEFT]:
+                        new_dir_x = -1
+                        new_dir_y = 0
+                    elif keys[pygame.K_RIGHT]:
+                        new_dir_x = 1
+                        new_dir_y = 0
+                    elif keys[pygame.K_UP]:
+                        new_dir_x = 0
+                        new_dir_y = -1
+                    elif keys[pygame.K_DOWN]:
+                        new_dir_x = 0
+                        new_dir_y = 1
 
         # check if dir changed
         if (new_dir_x, new_dir_y) != (self.dir_x, self.dir_y):
@@ -140,78 +144,128 @@ class Snake(object):
                 c.draw(surface)
 
 
-def draw_grid(rows, width, surface):
-    size_between = width // rows
-    x = 0
-    y = 0
+class Game:
+    def __init__(self):
+        super().__init__()
+        pass
 
-    for i in range(rows):
-        x += size_between
-        y += size_between
-
-        # Draw horizontal lines
-        pygame.draw.line(surface, (100, 100, 100), (x, 0), (x, width))
-
-        # Draw vertical lines
-        pygame.draw.line(surface, (100, 100, 100), (0, y), (width, y))
-
-
-def redraw_window(surface):
-    global snake, snack
-    surface.fill(BACKGROUND_COLOR)
-    snake.draw(surface)
-    snack.draw(surface)
-    draw_grid(ROWS, SCREEN_WIDTH, surface)
-
-
-def random_snack(rows, snake):
-    positions = snake.body
-
-    while True:
-        x = random.randrange(rows)
-        y = random.randrange(rows)
-
-        if len(list(filter(lambda z: z.pos == (x, y), positions))) > 0:
-            continue
-        else:
-            break
-
-    return (x, y)
-
-
-def main():
-    global snake, snack
-    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Snake Game")
-
-    clock = pygame.time.Clock()
-    snake = Snake((255, 0, 0), (10, 10))
-
-    snack = Cube(random_snack(ROWS, snake), color=(0, 255, 0))
-
-    running = True
-    while running:
-        pygame.time.delay(120)
-        clock.tick(60)
+    def step(self, action=None):
+        pygame.time.delay(60)
+        print(self.clock.get_fps())
 
         # Update game logic here
-        running = snake.move()
+        self.running = self.snake.move(action)
 
-        if snake.body[0].pos == snack.pos:
-            snake.add_cube()
-            snack = Cube(random_snack(ROWS, snake), color=(0, 255, 0))
+        if self.snake.body[0].pos == self.snack.pos:
+            self.snake.add_cube()
+            self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
 
-        for x in range(len(snake.body)):
-            if snake.body[x].pos in list(map(lambda z: z.pos, snake.body[x + 1 :])):
-                print("Score: ", len(snake.body))
-                snake.reset((10, 10))
+        # checking for collision with itself
+        for x in range(len(self.snake.body)):
+            if self.snake.body[x].pos in list(
+                map(lambda z: z.pos, self.snake.body[x + 1 :])
+            ):
+                print("Score: ", len(self.snake.body))
+                self.snake.reset((10, 10))
                 break
 
         # Draw game elements here
-        redraw_window(screen)
+        self.redraw_window(self.screen)
 
         # Update the display
         pygame.display.flip()
+
+    def setup(self, external_controls=False):
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Snake Game")
+        self.clock = pygame.time.Clock()
+        self.clock.tick(120)
+
+        self.snake = Snake((255, 0, 0), (10, 10))
+
+        self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
+
+        if not external_controls:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+
+            self.running = True
+
+            while self.running:
+                self.step()
+
+    def draw_grid(self, rows, width, surface):
+        size_between = width // rows
+        x = 0
+        y = 0
+
+        for i in range(rows):
+            x += size_between
+            y += size_between
+
+            # Draw horizontal lines
+            pygame.draw.line(surface, (100, 100, 100), (x, 0), (x, width))
+
+            # Draw vertical lines
+            pygame.draw.line(surface, (100, 100, 100), (0, y), (width, y))
+
+    def redraw_window(self, surface):
+        surface.fill(BACKGROUND_COLOR)
+        self.snake.draw(surface)
+        self.snack.draw(surface)
+        self.draw_grid(ROWS, SCREEN_WIDTH, surface)
+
+    def random_snack(self, rows, snake):
+        positions = self.snake.body
+
+        while True:
+            x = random.randrange(rows)
+            y = random.randrange(rows)
+
+            if len(list(filter(lambda z: z.pos == (x, y), positions))) > 0:
+                continue
+            else:
+                break
+
+        return (x, y)
+
+    def random_action(self):
+        dir = random.randrange(4)
+
+        if dir == 0:
+            return (1, 0)
+        elif dir == 1:
+            return (-1, 0)
+        elif dir == 2:
+            return (0, 1)
+        elif dir == 3:
+            return (0, -1)
+
+    def give_reward(self):
+        max_score = ROWS * ROWS
+        current_score = len(self.snake.body)
+
+        return current_score / max_score
+
+    def get_state_and_reward(self):
+        return self.snake.body, self.give_reward()
+
+
+def main():
+    game = Game()
+    game.setup(external_controls=False)
+
+    for i in range(100):
+        game.step(game.random_action())
+        pygame.time.delay(1000)
+
+    # wait for player to close window
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return
 
 
 if __name__ == "__main__":
