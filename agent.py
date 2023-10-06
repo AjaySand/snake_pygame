@@ -9,7 +9,7 @@ import time
 from model import Linear_QNet, QTrainer
 from helper import plot
 
-DIRECTIONS_LIST = {"L": (-1, 0), "R": (1, 0), "D": (0, -1), "U": (0, 1)}
+DIRECTIONS_LIST = {"L": (-1, 0), "R": (1, 0), "U": (0, -1), "D": (0, 1)}
 DIRECTIONS = ["L", "R", "D", "U"]
 ACTIONS = [0, 1, 2]  # 0 = left, 1 = right, 2 = straight
 ACTIONS_LIST = {0: "L", 1: "R", 2: "S"}
@@ -39,7 +39,7 @@ class Agent(object):
     # and randomly choose a direction that is not the opposite of the snake's current direction
     # return 'R', 'L' OR 'S'
     def random_action(self):
-        return random.choice(ACTIONS)
+        return ACTIONS[random.randint(0, 2)]
 
     def translate_action_to_direction(self, action, game):
         direction = None
@@ -68,9 +68,9 @@ class Agent(object):
                 direction = "R"
         elif dir_d:
             if action == 0:
-                direction = "L"
-            elif action == 1:
                 direction = "R"
+            elif action == 1:
+                direction = "L"
             elif action == 2:
                 direction = "D"
         elif dir_u:
@@ -94,7 +94,8 @@ class Agent(object):
                 grid[part.pos[0], part.pos[1]] = -1
 
         # extract food
-        grid[game.snack.pos] = 1
+        for snack in game.snacks:
+            grid[snack.pos] = 1
 
         # grid = grid.flatten()
 
@@ -117,13 +118,13 @@ class Agent(object):
         self.trainer.train_step(state, action, reward, next_state, done)
 
     def get_action(self, state, game):
-        self.epsilon = 30 - self.n_games
+        self.epsilon = 15 - self.n_games
         next_action = self.random_action()  # return 'R', 'L' OR 'S'
 
         if random.randint(0, 200) > self.epsilon:
             state0 = torch.tensor(state, dtype=torch.float)
             prediction = self.model(state0)  # should return a tensor of size 3
-            # next_action = DIRECTIONS[torch.argmax(prediction).item()]  # will be 'R', 'L' OR 'S'
+            next_action = torch.argmax(prediction).item()
 
         return next_action
 
@@ -174,7 +175,7 @@ def train():
                 record = score
                 agent.model.save()
 
-            if agent.n_games % 100 == 0:
+            if agent.n_games % 20 == 0:
                 agent.model.save(file_name='model_' + str(agent.n_games) + '.pth')
 
             # number of games, score, record, reward, old memory size, new memory size

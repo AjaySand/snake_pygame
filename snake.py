@@ -152,22 +152,30 @@ class Game:
         pygame.display.set_caption("Snake Game")
         self.clock = pygame.time.Clock()
         self.clock.tick(120)
+        self.snacks = []
+        self.num_snacks = 10
 
         self.snake = Snake((255, 0, 0), (10, 10))
-        self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
 
-    def step(self, action=None):
-        reward = 1
+        for i in range(self.num_snacks):
+            self.snacks.append(Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0)))
+
+    def step(self, action=None, step=0):
+        reward = 0
         is_done = 0
 
         # Update game logic here
         self.snake.move(action)
 
-        if self.snake.body[0].pos == self.snack.pos:
-            self.snake.add_cube()
-            self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
+        # check for collision with snack
+        for snack in self.snacks:
+            if self.snake.body[0].pos == snack.pos:
+                self.snake.add_cube()
+                self.snacks.remove(snack)
+                self.snacks.append(Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0)))
 
-            reward += 20
+                reward = 20
+                break
 
         self.snake.wrap(action)
         current_score = len(self.snake.body) * 10
@@ -180,12 +188,13 @@ class Game:
                 # print("Score: ", len(self.snake.body))
                 self.reset()
 
-                reward += -50
+                reward = -50
                 is_done = 1
 
                 break
 
         # Draw game elements here and Update the display
+        # if step % 100 == 0:
         self.redraw_window(self.screen)
 
         # Return reward, done, score
@@ -220,7 +229,10 @@ class Game:
     def redraw_window(self, surface):
         surface.fill(BACKGROUND_COLOR)
         self.snake.draw(surface)
-        self.snack.draw(surface)
+
+        for snack in self.snacks:
+            snack.draw(surface)
+
         self.draw_grid(ROWS, SCREEN_WIDTH, surface)
         pygame.display.flip()
 
@@ -233,20 +245,20 @@ class Game:
 
             if len(list(filter(lambda z: z.pos == (x, y), positions))) > 0:
                 continue
+            elif len(list(filter(lambda z: z.pos == (x, y), self.snacks))) > 0:
+                continue
             else:
                 break
 
         return (x, y)
 
     def reset(self):
-        print('\n')
+        print("\n")
         self.snake.reset((10, 10))
+        self.snacks = []
 
-    def give_reward(self):
-        return self.snake.body
-
-    def get_state_and_reward(self):
-        return self.snake.body, self.give_reward()
+        for i in range(self.num_snacks):
+            self.snacks.append(Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0)))
 
 
 def main():
