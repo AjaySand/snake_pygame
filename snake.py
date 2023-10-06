@@ -1,3 +1,5 @@
+# snake.py
+
 import math
 import random
 import pygame
@@ -102,16 +104,17 @@ class Snake(object):
                 if i == len(self.body) - 1:
                     self.turns.pop(p)
             else:
-                if c.dir_x == -1 and c.pos[0] <= 0:
-                    c.pos = (c.rows - 1, c.pos[1])
-                elif c.dir_x == 1 and c.pos[0] >= c.rows - 1:
-                    c.pos = (0, c.pos[1])
-                elif c.dir_y == 1 and c.pos[1] >= c.rows - 1:
-                    c.pos = (c.pos[0], 0)
-                elif c.dir_y == -1 and c.pos[1] <= 0:
-                    c.pos = (c.pos[0], c.rows - 1)
-                else:
-                    c.move(c.dir_x, c.dir_y)
+                c.move(c.dir_x, c.dir_y)
+
+            if c.dir_x == -1 and c.pos[0] <= 0:
+                c.pos = (c.rows - 1, c.pos[1])
+            elif c.dir_x == 1 and c.pos[0] >= (c.rows - 1):
+                c.pos = (0, c.pos[1])
+            elif c.dir_y == 1 and c.pos[1] >= (c.rows - 1):
+                c.pos = (c.pos[0], 0)
+            elif c.dir_y == -1 and c.pos[1] <= 0:
+                c.pos = (c.pos[0], c.rows - 1)
+
 
         return True
 
@@ -146,12 +149,17 @@ class Snake(object):
 
 class Game:
     def __init__(self):
-        super().__init__()
-        pass
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Snake Game")
+        self.clock = pygame.time.Clock()
+        self.clock.tick(120)
+
+        self.snake = Snake((255, 0, 0), (18, 19))
+        self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
 
     def step(self, action=None):
-        pygame.time.delay(60)
-        print(self.clock.get_fps())
+        reward = 0
+        is_done = 0
 
         # Update game logic here
         self.running = self.snake.move(action)
@@ -160,39 +168,40 @@ class Game:
             self.snake.add_cube()
             self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
 
+            reward = 10
+
         # checking for collision with itself
         for x in range(len(self.snake.body)):
             if self.snake.body[x].pos in list(
                 map(lambda z: z.pos, self.snake.body[x + 1 :])
             ):
                 print("Score: ", len(self.snake.body))
-                self.snake.reset((10, 10))
+                self.reset()
+
+                reward = -10
+                is_done = 1
+
                 break
 
         # Draw game elements here
         self.redraw_window(self.screen)
 
         # Update the display
-        pygame.display.flip()
+        # pygame.display.flip() # added it to redraw_window
+
+        # Return reward, done, score
+        return reward, is_done, len(self.snake.body) * 10
+
 
     def setup(self, external_controls=False):
-        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Snake Game")
-        self.clock = pygame.time.Clock()
-        self.clock.tick(120)
-
-        self.snake = Snake((255, 0, 0), (10, 10))
-
-        self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
-
         if not external_controls:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.running = False
 
             self.running = True
-
             while self.running:
+                pygame.time.delay(180)
                 self.step()
 
     def draw_grid(self, rows, width, surface):
@@ -215,6 +224,7 @@ class Game:
         self.snake.draw(surface)
         self.snack.draw(surface)
         self.draw_grid(ROWS, SCREEN_WIDTH, surface)
+        pygame.display.flip()
 
     def random_snack(self, rows, snake):
         positions = self.snake.body
@@ -230,23 +240,11 @@ class Game:
 
         return (x, y)
 
-    def random_action(self):
-        dir = random.randrange(4)
-
-        if dir == 0:
-            return (1, 0)
-        elif dir == 1:
-            return (-1, 0)
-        elif dir == 2:
-            return (0, 1)
-        elif dir == 3:
-            return (0, -1)
+    def reset(self):
+        self.snake.reset((10, 10))
 
     def give_reward(self):
-        max_score = ROWS * ROWS
-        current_score = len(self.snake.body)
-
-        return current_score / max_score
+        return self.snake.body
 
     def get_state_and_reward(self):
         return self.snake.body, self.give_reward()
