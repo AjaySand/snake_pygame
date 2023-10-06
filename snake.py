@@ -68,9 +68,6 @@ class Snake(object):
             new_dir_y = dir[1]
         else:
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    return False
-
                 for key in keys:
                     if keys[pygame.K_LEFT]:
                         new_dir_x = -1
@@ -106,17 +103,19 @@ class Snake(object):
             else:
                 c.move(c.dir_x, c.dir_y)
 
-            if c.dir_x == -1 and c.pos[0] <= 0:
+    def wrap(self, dir=None):
+        for i, c in enumerate(self.body):
+            p = c.pos[:]
+
+            if c.dir_x == -1 and c.pos[0] < 0:
                 c.pos = (c.rows - 1, c.pos[1])
-            elif c.dir_x == 1 and c.pos[0] >= (c.rows - 1):
+            elif c.dir_x == 1 and c.pos[0] > (c.rows - 1):
                 c.pos = (0, c.pos[1])
-            elif c.dir_y == 1 and c.pos[1] >= (c.rows - 1):
+
+            elif c.dir_y == 1 and c.pos[1] > (c.rows - 1):
                 c.pos = (c.pos[0], 0)
-            elif c.dir_y == -1 and c.pos[1] <= 0:
+            elif c.dir_y == -1 and c.pos[1] < 0:
                 c.pos = (c.pos[0], c.rows - 1)
-
-
-        return True
 
     def reset(self, pos):
         self.head = Cube(pos)
@@ -154,44 +153,43 @@ class Game:
         self.clock = pygame.time.Clock()
         self.clock.tick(120)
 
-        self.snake = Snake((255, 0, 0), (18, 19))
+        self.snake = Snake((255, 0, 0), (10, 10))
         self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
 
     def step(self, action=None):
-        reward = 0
+        reward = 1
         is_done = 0
 
         # Update game logic here
-        self.running = self.snake.move(action)
+        self.snake.move(action)
 
         if self.snake.body[0].pos == self.snack.pos:
             self.snake.add_cube()
             self.snack = Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0))
 
-            reward = 10
+            reward += 20
+
+        self.snake.wrap(action)
+        current_score = len(self.snake.body) * 10
 
         # checking for collision with itself
         for x in range(len(self.snake.body)):
             if self.snake.body[x].pos in list(
                 map(lambda z: z.pos, self.snake.body[x + 1 :])
             ):
-                print("Score: ", len(self.snake.body))
+                # print("Score: ", len(self.snake.body))
                 self.reset()
 
-                reward = -10
+                reward += -50
                 is_done = 1
 
                 break
 
-        # Draw game elements here
+        # Draw game elements here and Update the display
         self.redraw_window(self.screen)
 
-        # Update the display
-        # pygame.display.flip() # added it to redraw_window
-
         # Return reward, done, score
-        return reward, is_done, len(self.snake.body) * 10
-
+        return reward, is_done, current_score
 
     def setup(self, external_controls=False):
         if not external_controls:
@@ -241,6 +239,7 @@ class Game:
         return (x, y)
 
     def reset(self):
+        print('\n')
         self.snake.reset((10, 10))
 
     def give_reward(self):
