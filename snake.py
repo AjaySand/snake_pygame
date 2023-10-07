@@ -153,7 +153,7 @@ class Game:
         self.clock = pygame.time.Clock()
         self.clock.tick(120)
         self.snacks = []
-        self.num_snacks = 10
+        self.num_snacks = 1
 
         self.snake = Snake((255, 0, 0), (10, 10))
 
@@ -174,11 +174,11 @@ class Game:
                 self.snacks.remove(snack)
                 self.snacks.append(Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0)))
 
-                reward = 20
+                reward = 60
                 break
 
         self.snake.wrap(action)
-        current_score = len(self.snake.body) * 10
+        current_score = (len(self.snake.body) - 1) * 10
 
         # checking for collision with itself
         for x in range(len(self.snake.body)):
