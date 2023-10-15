@@ -56,6 +56,11 @@ class Snake(object):
         self.dir_x = 0
         self.dir_y = 1
 
+        self.add_cube()
+        self.add_cube()
+        self.add_cube()
+        self.add_cube()
+
     def move(self, dir=None):
         ## add pressed keys to the turns dictionary
         new_dir_x = self.dir_x
@@ -125,6 +130,11 @@ class Snake(object):
         self.dir_x = 0
         self.dir_y = 1
 
+        self.add_cube()
+        self.add_cube()
+        self.add_cube()
+        self.add_cube()
+
     def add_cube(self):
         tail = self.body[-1]
         dx, dy = tail.dir_x, tail.dir_y
@@ -150,6 +160,10 @@ class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption("Snake Game")
+
+        pygame.init()
+        pygame.font.init()
+
         self.clock = pygame.time.Clock()
         self.clock.tick(120)
         self.snacks = []
@@ -161,7 +175,7 @@ class Game:
             self.snacks.append(Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0)))
 
     def step(self, action=None, step=0):
-        reward = 0
+        reward = 5
         is_done = 0
 
         # Update game logic here
@@ -174,11 +188,11 @@ class Game:
                 self.snacks.remove(snack)
                 self.snacks.append(Cube(self.random_snack(ROWS, self.snake), color=(0, 255, 0)))
 
-                reward = 60
+                reward = 25
                 break
 
         self.snake.wrap(action)
-        current_score = (len(self.snake.body) - 1) * 10
+        current_score = len(self.snake.body)
 
         # checking for collision with itself
         for x in range(len(self.snake.body)):
@@ -188,7 +202,7 @@ class Game:
                 # print("Score: ", len(self.snake.body))
                 self.reset()
 
-                reward = -50
+                reward = -5000
                 is_done = 1
 
                 break
@@ -198,7 +212,7 @@ class Game:
         self.redraw_window(self.screen)
 
         # Return reward, done, score
-        return reward, is_done, current_score
+        return reward, is_done, current_score - 3
 
     def setup(self, external_controls=False):
         if not external_controls:
@@ -234,6 +248,12 @@ class Game:
             snack.draw(surface)
 
         self.draw_grid(ROWS, SCREEN_WIDTH, surface)
+
+        # draw text on screen
+        font = pygame.font.SysFont("comicsans", 40)
+        text = font.render("Score: " + str(len(self.snake.body)), True, (255, 255, 255))
+        surface.blit(text, (SCREEN_WIDTH - 150, 10))
+
         pygame.display.flip()
 
     def random_snack(self, rows, snake):

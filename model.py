@@ -3,24 +3,26 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as Fq
 import os
-
+cuda = torch.cuda.is_available()
 
 class Linear_QNet(nn.Module):
+    # def __init__(self, input_size, hidden_size, hidden_size2 = None, hidden_size3 = None, output_size = None):
     def __init__(self, input_size, hidden_size, hidden_size2, output_size):
-        super().__init__()
-
-        cuda = torch.cuda.is_available()
         print("CUDA is available:", cuda)
         self.device = torch.device("cuda:0" if cuda else "cpu")
 
-        self.linear1 = nn.Linear(input_size, hidden_size)
-        self.linear2 = nn.Linear(hidden_size, hidden_size2)
-        self.linear3 = nn.Linear(hidden_size2, output_size)
+        super().__init__()
+
+        self.linear1 = nn.Linear(input_size, hidden_size, device=self.device)
+        self.linear2 = nn.Linear(hidden_size, hidden_size2, device=self.device)
+        self.linear3 = nn.Linear(hidden_size2, output_size, device=self.device)
 
     def forward(self, x):
-        x = Fq.relu6(self.linear1(x))
-        x = Fq.relu6(self.linear2(x))
+        x = Fq.relu(self.linear1(x))
+        x = self.linear2(x)
+        x = Fq.relu(self.linear2(x))
         x = self.linear3(x)
+
         return x
 
     def save(self, file_name="model.pth"):
@@ -53,10 +55,10 @@ class QTrainer:
         self.criterion = nn.MSELoss()
 
     def train_step(self, state, action, reward, next_state, done):
-        stat = torch.tensor(state, dtype=torch.float)
-        next_stat = torch.tensor(next_state, dtype=torch.float)
-        action = torch.tensor(action, dtype=torch.long)
-        reward = torch.tensor(reward, dtype=torch.float)
+        stat = torch.tensor(state, dtype=torch.float, device=self.model.device)
+        next_stat = torch.tensor(next_state, dtype=torch.float, device=self.model.device)
+        action = torch.tensor(action, dtype=torch.long, device=self.model.device)
+        reward = torch.tensor(reward, dtype=torch.float, device=self.model.device)
 
         if len(stat.shape) == 1:
             stat = torch.unsqueeze(stat, 0)
